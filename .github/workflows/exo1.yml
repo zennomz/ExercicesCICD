@@ -2,6 +2,7 @@ name: exo1
 
 on:
   push:
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -13,11 +14,13 @@ jobs:
       - uses: actions/cache@v5
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
       - run: npm ci
       - run: npm test
       - if: always()
-        run: 
+        run: |
           echo "## Validation Results" >> "$GITHUB_STEP_SUMMARY"
           echo "Status: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Commit: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commit: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"

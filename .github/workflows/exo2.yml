@@ -1,0 +1,36 @@
+name: exo2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.18.0
+      - run: npm ci
+      - run: npm run build
+      - name: Verify build output
+        run: |
+          if [ ! -f dist/index.html ]; then
+            echo "::error::Le fichier dist/index.html n'existe pas"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: build
+          path: dist/
+      - if: always()
+        run: |
+          echo "## Build Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "Status: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commit: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Artifact: build (dist/)" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f dist/index.html ]; then
+            echo "Build output: dist/index.html ($(wc -c < dist/index.html) bytes)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Build output: dist/index.html not found" >> "$GITHUB_STEP_SUMMARY"
+          fi
