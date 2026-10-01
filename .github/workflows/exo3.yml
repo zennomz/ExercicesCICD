@@ -1,0 +1,80 @@
+name: exo3
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: application
+          path: dist/
+
+  test:
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 2
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-24.04
+          - windows-2022
+        node-version:
+          - 20
+          - 22
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - uses: actions/download-artifact@v7
+        with:
+          name: application
+          path: dist/
+      - run: npm test
+
+  deploy:
+    needs:
+      - build
+      - test
+    runs-on: ubuntu-24.04
+    environment:
+      name: ${{ inputs.target }}
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: application
+          path: dist/
+      - name: Display API_URL and summarize deployment
+        env:
+          TARGET: ${{ inputs.target }}
+          API_URL: ${{ vars.API_URL }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          echo "API_URL: $API_URL"
+          {
+            echo "## Deployment"
+            echo "- Target: $TARGET"
+            echo "- API_URL: $API_URL"
+            echo "- Commit: $COMMIT"
+          } >> "$GITHUB_STEP_SUMMARY"
